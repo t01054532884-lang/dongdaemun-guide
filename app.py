@@ -2,9 +2,11 @@
 
 내용은 2026-11-17에 공개 블로그·기사에서 모은 것이다. 출처 탭에 링크와 작성 시점을 적었다.
 """
+from pathlib import Path
 from urllib.parse import quote
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="동대문 여성복 답사 노트", page_icon="🧵", layout="centered")
 
@@ -66,6 +68,25 @@ html, body, [class*="st-"], .stMarkdown, .stTabs { font-family:"IBM Plex Sans KR
 .g .tl-shade{position:absolute;top:0;bottom:0;background:var(--indigo-soft);opacity:.6;border-radius:4px}
 .g .tl-axis{position:relative;height:18px;font-size:11px;color:var(--muted)}
 .g .tl-axis span{position:absolute;transform:translateX(-50%)}
+/* 휴대폰 우선: Streamlit 기본 머리줄·여백 줄이기 */
+header[data-testid="stHeader"]{display:none}
+[data-testid="stToolbar"],[data-testid="stDecoration"],footer{display:none!important}
+.block-container,[data-testid="stMainBlockContainer"]{padding-top:1rem!important;padding-bottom:4rem!important;padding-left:max(14px,env(safe-area-inset-left,0px))!important;padding-right:max(14px,env(safe-area-inset-right,0px))!important;max-width:720px}
+.stTabs [data-baseweb="tab-list"]{gap:2px;position:sticky;top:0;z-index:5;background:#f6f6f9;padding-top:4px}
+.stTabs [data-baseweb="tab"]{padding:10px 12px;font-size:15px;min-height:44px}
+.g .maps a{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);text-decoration:none;font-weight:500}
+/* 표를 휴대폰에서는 카드처럼 세로로 */
+.g table.rows{min-width:0}
+@media (max-width:640px){
+  .g table.rows thead{display:none}
+  .g table.rows tr{display:block;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .g table.rows tr:last-child{border-bottom:0}
+  .g table.rows td{display:block;padding:2px 0;border:0}
+  .g table.rows td:first-child{font-weight:700;color:var(--indigo)}
+  .g table.rows td:empty{display:none}
+  .g table.rows td.m{color:var(--muted);font-size:13px}
+  .g .cards{grid-template-columns:1fr}
+}
 .g .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);margin-top:10px}
 .g .sw{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:middle;margin-right:5px}
 </style>
@@ -89,13 +110,13 @@ block("""
   <div class="eyebrow">2026-11-17 정리 · 여성의류 쇼핑몰 창업 준비</div>
   <h1>동대문 여성복 답사 노트</h1>
   <p class="sub">사업자등록 전에 밤 10시쯤 동대문 도매상가를 먼저 둘러보려는 사람을 위한 정리입니다.
-  내일 답사 계획, 매장 위치, 영업시간, 쇼핑몰 창업 절차, 도매 앱·사이트를 탭으로 나눴습니다.
-  공개된 블로그·기사만 읽어서 모았고, 영업시간과 조건은 자주 바뀌니 가기 전에 한 번 더 확인하세요.</p>
+  본 매장은 <b>메모</b> 탭에 적어 두면 이 휴대폰에 저장됩니다.
+  영업시간과 조건은 자주 바뀌니 가기 전에 한 번 더 확인하세요.</p>
 </div>
 """)
 
-tab_trip, tab_shops, tab_hours, tab_start, tab_apps, tab_src = st.tabs(
-    ["내일 답사", "매장·위치", "영업시간", "쇼핑몰 창업 절차", "도매 앱·사이트", "출처"]
+tab_trip, tab_memo, tab_shops, tab_hours, tab_start, tab_apps, tab_src = st.tabs(
+    ["답사", "메모", "매장", "시간", "창업", "앱", "출처"]
 )
 
 # ---------------------------------------------------------------- 내일 답사
@@ -122,36 +143,36 @@ with tab_trip:
 
 <h2>밤 답사 동선 (22시 출발 기준)</h2>
 <p class="sub">처음 가는 사람에게 추천되는 시간은 밤 10~11시입니다. 8시 오픈 직후는 진열·주문 처리로 바쁘고, 22시쯤부터 여유가 생겨 물어보기 좋습니다. 2~3시간 잡으세요.</p>
-<div class="tbl"><table>
+<div class="tbl"><table class="rows">
 <thead><tr><th>시간</th><th>할 일</th><th>메모</th></tr></thead>
 <tbody>
-<tr><td>출발 전</td><td>볼 품목 2~3개만 정하기 (예: 니트·원피스·슬랙스)</td><td>계획 없이 가면 예쁜 것만 보다 끝남</td></tr>
-<tr><td>21:30</td><td>동대문역사문화공원역 도착, 화장실·편의점</td><td>운동화, 가벼운 가방, 보조배터리</td></tr>
-<tr><td>22:00–23:00</td><td>APM PLACE → 뉴존 → 디자이너클럽</td><td>모두 20시에 여는 밤 상가</td></tr>
-<tr><td>23:00–24:00</td><td>더블유(W) 등 작은 상가, 또는 메모 정리</td><td>디오트는 자정, 청평화는 23시에 열기 시작</td></tr>
-<tr><td>00:00–01:30</td><td>질문은 피하고 눈으로만</td><td>카톡·앱 주문 출고가 몰리는 시간</td></tr>
-<tr><td>01:00 이후</td><td>체력이 되면 디오트·청평화</td><td>여성복 거래처가 가장 많이 모인 곳. 지하철 끊기니 귀갓길 확인</td></tr>
+<tr><td>출발 전</td><td>볼 품목 2~3개만 정하기 (예: 니트·원피스·슬랙스)</td><td class="m">계획 없이 가면 예쁜 것만 보다 끝남</td></tr>
+<tr><td>21:30</td><td>동대문역사문화공원역 도착, 화장실·편의점</td><td class="m">운동화, 가벼운 가방, 보조배터리</td></tr>
+<tr><td>22:00–23:00</td><td>APM PLACE → 뉴존 → 디자이너클럽</td><td class="m">모두 20시에 여는 밤 상가</td></tr>
+<tr><td>23:00–24:00</td><td>더블유(W) 등 작은 상가, 또는 메모 정리</td><td class="m">디오트는 자정, 청평화는 23시에 열기 시작</td></tr>
+<tr><td>00:00–01:30</td><td>질문은 피하고 눈으로만</td><td class="m">카톡·앱 주문 출고가 몰리는 시간</td></tr>
+<tr><td>01:00 이후</td><td>체력이 되면 디오트·청평화</td><td class="m">여성복 거래처가 가장 많이 모인 곳. 지하철 끊기니 귀갓길 확인</td></tr>
 </tbody></table></div>
 <p class="note">지하철로 돌아오려면 자정 전에 끝내야 하니 APM PLACE·뉴존·디자이너클럽만 보는 게 현실적입니다. 막차 시간은 지도 앱에서 확인하세요.</p>
 
 <h2>현장에서 쓰는 말</h2>
-<div class="tbl"><table>
+<div class="tbl"><table class="rows">
 <thead><tr><th>동대문 말</th><th>뜻</th><th>예</th></tr></thead>
 <tbody>
 <tr><td>언니·이모 / 삼촌</td><td>여자 사장님 / 남자 사장님</td><td></td></tr>
-<tr><td>상호</td><td>쇼핑몰 이름</td><td>"어디서 오셨어요?" = 상호가 뭐냐는 뜻</td></tr>
-<tr><td>어떻게 나왔어요?</td><td>가격이 얼마예요?</td><td>"8,000원이요"</td></tr>
-<tr><td>단가 / 깔</td><td>도매가 / 색상</td><td>"이거 깔 몇 개 나와요?"</td></tr>
-<tr><td>낱장</td><td>한 장</td><td>도매는 낱장 판매를 꺼리는 곳이 많음</td></tr>
+<tr><td>상호</td><td>쇼핑몰 이름</td><td class="m">"어디서 오셨어요?" = 상호가 뭐냐는 뜻</td></tr>
+<tr><td>어떻게 나왔어요?</td><td>가격이 얼마예요?</td><td class="m">"8,000원이요"</td></tr>
+<tr><td>단가 / 깔</td><td>도매가 / 색상</td><td class="m">"이거 깔 몇 개 나와요?"</td></tr>
+<tr><td>낱장</td><td>한 장</td><td class="m">도매는 낱장 판매를 꺼리는 곳이 많음</td></tr>
 <tr><td>장끼</td><td>영수증(거래 명세)</td><td></td></tr>
-<tr><td>미송</td><td>재고 없을 때 돈 먼저 내고 입고되면 받기</td><td>"월밤" = 월요일 밤 입고</td></tr>
+<tr><td>미송</td><td>재고 없을 때 돈 먼저 내고 입고되면 받기</td><td class="m">"월밤" = 월요일 밤 입고</td></tr>
 <tr><td>리오더</td><td>재주문</td><td></td></tr>
 </tbody></table></div>
 
 <h2>하면 좋은 것 · 하지 말 것</h2>
 <div class="cards">
   <div class="card"><h3>하면 좋은 것</h3><ul>
-    <li>상가·층·호수, 품목, 단가, 색상 수를 휴대폰 메모에 바로 적기 (아래 양식)</li>
+    <li>상가·층·호수, 품목, 단가, 색상 수를 메모 탭에 바로 적기</li>
     <li>마음에 드는 매장의 상호·호수 기억하기, 명함 있으면 받기</li>
     <li>손님이 몰린 매장, 통로에 많이 걸린 스타일 보기</li>
     <li>같은 품목도 층마다 단가가 다름 (디오트는 1~2층과 3~4층의 단가·스타일이 다르다는 글)</li>
@@ -174,11 +195,7 @@ with tab_trip:
   </ul></div>
 </div>
 
-<h2>답사 기록 양식</h2>
-<div class="tbl"><table>
-<thead><tr><th>상가·층·호수</th><th>상호</th><th>품목</th><th>단가</th><th>색상 수</th><th>사이즈</th><th>소재·느낌</th><th>메모</th></tr></thead>
-<tbody><tr><td>예: 뉴존 2층</td><td>(간판 이름)</td><td>니트 가디건</td><td>(들은 가격)</td><td>4</td><td>프리</td><td>도톰, 보풀 적음</td><td>손님 많음</td></tr></tbody>
-</table></div>
+<p class="note">본 매장은 위쪽 <b>메모</b> 탭에 바로 적어 두세요.</p>
 
 <h2>낮에 가 볼 곳: DDP 쇼룸</h2>
 <div class="card feature">
@@ -225,6 +242,12 @@ SHOPS = [
 
 def fmt(h):
     return f"{h % 24:02d}:00"
+
+
+# ---------------------------------------------------------------- 메모 (휴대폰 브라우저 localStorage에 저장)
+with tab_memo:
+    memo_component = components.declare_component("memo", path=str(Path(__file__).parent / "memo_component"))
+    memo_component(key="memo", default=None)
 
 
 with tab_shops:
@@ -347,7 +370,7 @@ with tab_apps:
 막 시작한 쇼핑몰은 구하기 어려울 수 있어 셀업 같은 매칭 서비스를 씁니다.</p>
 
 <h2>참고할 정보 사이트</h2>
-<div class="tbl"><table>
+<div class="tbl"><table class="rows">
 <thead><tr><th>사이트</th><th>쓸모</th></tr></thead>
 <tbody>
 <tr><td><a href="https://montips.com/dongdaemun-market-hours/" target="_blank">montips</a></td><td>상가별 영업시간, 여성복 동선, 초보 가이드 (2026-07)</td></tr>

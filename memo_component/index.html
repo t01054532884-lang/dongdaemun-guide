@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--ink:#1d2140;--muted:#5d6280;--line:#dcdeea;--surface:#fff;--bg:#f6f6f9;--indigo:#2f3a8f;--rose:#c2185b;--rose-soft:#fbe4ee;--ok:#2e7d4f}
+*{box-sizing:border-box}
+body{margin:0;font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:var(--ink);background:transparent;font-size:15px}
+h2{font-size:20px;margin:4px 0 4px;color:var(--indigo);font-weight:700}
+.sub{color:var(--muted);font-size:13.5px;line-height:1.6;margin:0 0 12px}
+form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);font-weight:500}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;width:100%;min-height:44px}
+textarea{min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--rose);outline-offset:1px}
+.likes{display:flex;gap:8px}
+.likes button{flex:1}
+button{font:inherit;font-size:15px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;padding:0 12px}
+button.on{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700}
+button.primary{background:var(--rose);border-color:var(--rose);color:#fff;font-weight:700}
+.list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.item .h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.item b{font-size:15.5px}
+.item .t{font-size:12px;color:var(--muted);white-space:nowrap}
+.item p{margin:0;font-size:14px;color:var(--muted);line-height:1.5;white-space:pre-wrap}
+.item .del{align-self:flex-end;min-height:32px;font-size:13px;color:var(--muted);border-color:transparent;background:transparent}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.status{font-size:13px;color:var(--ok);min-height:18px;margin-top:6px}
+.empty{color:var(--muted);font-size:14px;text-align:center;padding:16px;border:1px dashed var(--line);border-radius:10px}
+.free{margin-top:18px}
+</style></head><body>
+<h2>답사 메모</h2>
+<p class="sub">이 휴대폰 브라우저에만 저장됩니다. 다른 휴대폰이나 다른 사람에게는 보이지 않아요. 답사가 끝나면 <b>전체 복사</b>로 카톡에 보내 두세요.</p>
+
+<form id="f" autocomplete="off">
+  <div class="row">
+    <label for="shop">상가<select id="shop"></select></label>
+    <label for="spot">층·호수<input id="spot" placeholder="예: 2층 A-15"></label>
+  </div>
+  <div class="row">
+    <label for="name">매장 이름<input id="name" placeholder="간판 이름"></label>
+    <label for="item">품목<input id="item" placeholder="예: 니트 가디건"></label>
+  </div>
+  <div class="row">
+    <label for="price">단가<input id="price" inputmode="numeric" placeholder="예: 12000"></label>
+    <label for="colors">색상 수<input id="colors" inputmode="numeric" placeholder="예: 4"></label>
+  </div>
+  <label for="note">메모 (소재·사이즈·느낌·사장님 반응)<textarea id="note" placeholder="예: 도톰, 프리 사이즈, 손님 많음, 사진 X"></textarea></label>
+  <div class="likes" role="group" aria-label="관심도">
+    <button type="button" data-l="1">관심 ★</button>
+    <button type="button" data-l="2">좋음 ★★</button>
+    <button type="button" data-l="3">꼭 ★★★</button>
+  </div>
+  <button type="submit" class="primary" id="save">저장</button>
+  <div class="status" id="status" aria-live="polite"></div>
+</form>
+
+<div class="list" id="list"></div>
+
+<div class="tools">
+  <button type="button" id="copy">전체 복사</button>
+  <button type="button" id="csv">엑셀(CSV) 저장</button>
+</div>
+
+<div class="free">
+  <label for="freeNote">자유 메모 (자동 저장)<textarea id="freeNote" style="min-height:110px" placeholder="오늘 본 유행, 다음에 갈 곳, 궁금한 점"></textarea></label>
+</div>
+
+<script>
+const SHOPS = ["APM PLACE","뉴존(누죤)","디자이너클럽","더블유(W)","디오트","청평화","APM","벨포스트","신평화","남평화","서평화"];
+// Streamlit 컴포넌트 연결: 준비 알림을 보내야 높이 조절 메시지가 먹는다
+window.parent.postMessage({isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1}, "*");
+window.addEventListener("message", e => { if (e.data && e.data.type === "streamlit:render") resize(); });
+const KEY = "ddm-notes-v1", FREE = "ddm-free-v1";
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } }
+};
+let notes = store.get(KEY, []);
+let like = 0;
+
+$("shop").innerHTML = SHOPS.concat(["기타"]).map(s => `<option>${s}</option>`).join("");
+
+document.querySelectorAll(".likes button").forEach(b => b.addEventListener("click", () => {
+  like = like === +b.dataset.l ? 0 : +b.dataset.l;
+  document.querySelectorAll(".likes button").forEach(x => x.classList.toggle("on", +x.dataset.l === like));
+}));
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function won(p){ const n = String(p).replace(/[^0-9]/g, ""); return n ? Number(n).toLocaleString("ko-KR") + "원" : ""; }
+function line(n){
+  return [n.shop + (n.spot ? " " + n.spot : ""), n.name, n.item, won(n.price), n.colors ? n.colors + "색" : "", "★".repeat(n.like || 0)]
+    .filter(Boolean).join(" · ") + (n.note ? "\n  " + n.note : "");
+}
+
+function render(){
+  const L = $("list");
+  if (!notes.length) { L.innerHTML = '<div class="empty">아직 메모가 없어요. 위에 적고 저장을 누르면 여기에 쌓입니다.</div>'; }
+  else L.innerHTML = notes.map((n, i) => `
+    <div class="item">
+      <div class="h"><b>${esc(n.shop)}${n.spot ? " " + esc(n.spot) : ""}${n.name ? " · " + esc(n.name) : ""}</b><span class="t">${esc(n.time)}</span></div>
+      <p>${esc([n.item, won(n.price), n.colors ? n.colors + "색" : "", "★".repeat(n.like || 0)].filter(Boolean).join(" · "))}</p>
+      ${n.note ? `<p>${esc(n.note)}</p>` : ""}
+      <button type="button" class="del" data-i="${i}">지우기</button>
+    </div>`).join("");
+  L.querySelectorAll(".del").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.armed) { notes.splice(+b.dataset.i, 1); store.set(KEY, notes); render(); }
+    else { b.dataset.armed = 1; b.textContent = "한 번 더 누르면 지워져요"; b.style.color = "var(--rose)"; }
+  }));
+  resize();
+}
+
+$("f").addEventListener("submit", e => {
+  e.preventDefault();
+  const n = { shop: $("shop").value, spot: $("spot").value.trim(), name: $("name").value.trim(), item: $("item").value.trim(),
+    price: $("price").value.trim(), colors: $("colors").value.trim(), note: $("note").value.trim(), like,
+    time: new Date().toLocaleTimeString("ko-KR", {hour: "2-digit", minute: "2-digit"}) };
+  if (!n.spot && !n.name && !n.item && !n.note) { flash("층·호수, 매장 이름, 품목, 메모 중 하나는 적어 주세요."); return; }
+  notes.unshift(n);
+  const ok = store.set(KEY, notes);
+  ["spot","name","item","price","colors","note"].forEach(id => $(id).value = "");
+  like = 0; document.querySelectorAll(".likes button").forEach(x => x.classList.remove("on"));
+  flash(ok ? "저장했어요." : "이 브라우저는 저장이 막혀 있어요. 화면을 닫기 전에 전체 복사해 두세요.");
+  render();
+});
+
+function flash(t){ $("status").textContent = t; setTimeout(() => { if ($("status").textContent === t) $("status").textContent = ""; }, 3500); }
+
+function allText(){
+  const free = $("freeNote").value.trim();
+  return "동대문 답사 메모\n\n" + notes.slice().reverse().map(line).join("\n") + (free ? "\n\n[자유 메모]\n" + free : "");
+}
+$("copy").addEventListener("click", () => {
+  const t = allText();
+  const fallback = () => { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); flash("복사했어요. 카톡에 붙여 넣으세요."); } catch(e){ flash("복사가 안 돼요. 길게 눌러 직접 복사하세요."); } ta.remove(); };
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => flash("복사했어요. 카톡에 붙여 넣으세요."), fallback); else fallback();
+});
+$("csv").addEventListener("click", () => {
+  const head = ["시간","상가","층·호수","매장","품목","단가","색상 수","관심도","메모"];
+  const rows = notes.slice().reverse().map(n => [n.time, n.shop, n.spot, n.name, n.item, n.price, n.colors, n.like || "", n.note]);
+  const csv = "﻿" + [head].concat(rows).map(r => r.map(v => '"' + String(v ?? "").replace(/"/g, '""') + '"').join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv"}));
+  a.download = "동대문_답사메모.csv"; document.body.appendChild(a); a.click(); a.remove();
+  flash("파일 저장을 시작했어요. 안 되면 전체 복사를 쓰세요.");
+});
+
+$("freeNote").value = store.get(FREE, "");
+let t; $("freeNote").addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => store.set(FREE, $("freeNote").value), 400); });
+
+function resize(){
+  // 문서 전체 높이를 쓰면 틀 높이가 늘 때마다 같이 늘어 끝없이 커진다 → 내용(body) 높이만 쓴다
+  const h = Math.ceil(document.body.getBoundingClientRect().height) + 24;
+  window.parent.postMessage({isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: h}, "*");
+}
+new ResizeObserver(resize).observe(document.body);
+render();
+</script>
+</body></html>
